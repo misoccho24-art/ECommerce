@@ -656,13 +656,15 @@
     el.scrollIntoView({ behavior: "instant", block: "start" });
   }
 
+  const closeMenu = () => { $("#nav").classList.remove("open"); const b = $("#menuBtn"); b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-label", "Menu"); };
+
   // ---------- router ----------
   function route() {
     const [, view, arg] = (location.hash.slice(1) || "/").split("/");
     const prev = route.cur?.[0];
     route.cur = [view, arg];
     clearTimeout(trackTimer);
-    $("#nav").classList.remove("open");
+    closeMenu();
     // Moving between help topics: page is already rendered, just jump to the section.
     if (view === "help" && prev === "help" && $(".help")) return scrollToHelp(arg);
     document.title = "Grounded Sneakers";
@@ -690,7 +692,7 @@
     const d = el.dataset;
     if (el.id === "cartBtn") return openBag();
     if (el.id === "searchBtn") { const sb = $("#searchbar"); sb.classList.toggle("open"); if (sb.classList.contains("open")) $("#q").focus(); return; }
-    if (el.id === "menuBtn") { const n = $("#nav").classList.toggle("open"); el.setAttribute("aria-expanded", n); return; }
+    if (el.id === "menuBtn") { const n = $("#nav").classList.toggle("open"); el.setAttribute("aria-expanded", n); el.setAttribute("aria-label", n ? "Close menu" : "Menu"); return; }
     if (d.save) { e.preventDefault(); return toggleSave(d.save); }
     if ("quick" in d) { $$(".quick.open").forEach(q => q.classList.remove("open")); el.closest(".quick").classList.add("open"); return; }
     if (d.qadd) { el.closest(".quick").classList.remove("open"); return add(d.qadd, d.size); }
@@ -936,7 +938,7 @@
   });
 
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") { if ($("#pay").classList.contains("open")) { closeGateway(); return toast("Payment cancelled. Your bag is saved."); } closeBag(); $("#searchbar").classList.remove("open"); }
+    if (e.key === "Escape") { if ($("#pay").classList.contains("open")) { closeGateway(); return toast("Payment cancelled. Your bag is saved."); } closeBag(); closeMenu(); $("#searchbar").classList.remove("open"); }
     if (e.key === "/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); $("#searchbar").classList.add("open"); $("#q").focus(); }
   });
 
