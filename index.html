@@ -6,7 +6,7 @@
 <title>Grounded Sneakers</title>
 <meta name="description" content="Grounded — sneakers in earthy tones, made for the long way round.">
 <meta name="theme-color" content="#3f4a2c">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%233f4a2c'/%3E%3Ctext x='16' y='22' font-family='Georgia' font-size='18' font-style='italic' fill='%23f3ede2' text-anchor='middle'%3Eg%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%233f4a2c%22%2F%3E%3Cg%20transform%3D%22translate(4%2010.5)%20scale(.24)%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20fill%3D%22%23f3ede2%22%20d%3D%22M0%209%209%200H44L39%2010H13V40H31V33H22L27%2024H44V37L39.67%2050H9L0%2041ZM60.33%200H88L96%208V25L89%2031L99%2050H85L77%2033H63V50H50V31ZM63%2010V24H81L84%2021V13L81%2010Z%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
 <link rel="preconnect" href="https://images.unsplash.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,12 +40,13 @@ img{display:block;max-width:100%}
 .announce b{font-weight:600}
 header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--line)}
 .bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:72px;gap:24px;position:relative}
-.nav{display:flex;gap:28px;font-size:14px;font-weight:500}
-.nav a{position:relative;padding:6px 0}
+.nav{display:flex;gap:22px;font-size:14px;font-weight:500}
+.nav a{position:relative;padding:6px 0;white-space:nowrap}
 .nav a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform var(--t) var(--ease)}
 .nav a:hover::after,.nav a[aria-current=page]::after{transform:scaleX(1)}
 .nav a.sale{color:var(--rust)}
-.logo{font-family:var(--serif);font-size:28px;font-weight:500;letter-spacing:-.03em}
+.logo{font-family:var(--serif);font-size:28px;font-weight:500;letter-spacing:-.03em;display:inline-flex;align-items:baseline;line-height:1}
+.gr{height:.72em;width:1.44em;fill:currentColor;margin-right:.03em;flex:none;overflow:visible}
 .logo i{font-style:normal;color:var(--rust)}
 .tools{display:flex;justify-content:flex-end;align-items:center;gap:4px}
 .tbtn{position:relative;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;transition:background var(--t)}
@@ -217,7 +218,7 @@ main{flex:1}
 
 footer{background:var(--brown);color:rgba(243,237,226,.7);font-size:14px;border-top:1px solid rgba(243,237,226,.12)}
 .fgrid{display:grid;grid-template-columns:2fr repeat(2,1fr);gap:40px;padding:64px 0 48px}
-.fgrid .logo{color:var(--cream);display:block;margin-bottom:14px}
+.fgrid .logo{color:var(--cream);display:inline-flex;margin-bottom:14px}
 .fgrid h4{color:var(--cream);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px}
 .fgrid ul{list-style:none;display:grid;gap:10px}
 .fgrid a:hover{color:var(--cream)}
@@ -304,7 +305,7 @@ details ul{padding-left:18px;display:grid;gap:4px}
 .co{display:grid;grid-template-columns:1.35fr 1fr;gap:48px;align-items:start;padding-bottom:40px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:32px}
 .panel h2{font-family:var(--serif);font-weight:400;font-size:28px;letter-spacing:-.02em;margin-bottom:20px}
-.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end}
 .fields .full{grid-column:1/-1}
 label{display:grid;gap:6px;font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.02em}
 label input{height:50px;border:1px solid var(--line);border-radius:12px;padding:0 14px;background:var(--paper);color:var(--ink);font-weight:400;font-size:15px;outline:none;transition:border-color var(--t)}
@@ -378,6 +379,151 @@ label textarea.bad{border-color:var(--rust)}
 @media (max-width:1080px){.topics{grid-template-columns:repeat(2,1fr)}.contact{grid-template-columns:minmax(0,1fr)}.channels{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:860px){.help{grid-template-columns:minmax(0,1fr)}.help-nav{display:none}.topics{margin-bottom:48px}.hsec{scroll-margin-top:84px;padding-bottom:56px;margin-bottom:56px}.steps{grid-template-columns:minmax(0,1fr)}.channels{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:520px){.topics{gap:10px}.topic{padding:16px}.topic b{font-size:19px}.topic span{font-size:12.5px}.htable td,.htable th{padding:12px}}
+
+/* ---------- my orders ---------- */
+.tab-n{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:4px;border-radius:999px;background:var(--cream);color:var(--ink);font-size:11.5px;font-weight:700}
+.tab[aria-pressed=true] .tab-n{background:rgba(255,255,255,.18);color:var(--paper)}
+.olist{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(200px,230px);gap:10px;overflow-x:auto;padding:2px 2px 8px;margin-bottom:28px;scrollbar-width:thin}
+.ochip{display:grid;gap:2px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--card);font-size:12.5px;color:var(--muted);transition:border-color var(--t),box-shadow var(--t)}
+.ochip:hover{border-color:var(--ink)}
+.ochip[aria-current]{border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive);background:color-mix(in srgb,var(--olive) 5%,var(--card))}
+.ochip b{font-size:15px;color:var(--ink)}
+.ochip-foot{display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--ink);font-weight:600}
+.ochip-foot em{font-style:normal;margin-left:auto}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--star)}
+.dot.done{background:var(--olive)}
+.orders-view{display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:28px;align-items:start;padding-bottom:48px}
+.rc-col{position:sticky;top:96px}
+.receipt{background:#fff;color:#2a2620;border-radius:6px 6px 0 0;padding:28px 26px 30px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 12px 32px rgba(31,26,20,.10);position:relative;font-size:13.5px;
+  --zz:radial-gradient(circle at 8px 0,transparent 7px,#fff 7.5px);margin-bottom:12px}
+.receipt::after{content:"";position:absolute;left:0;right:0;bottom:-12px;height:12px;background:var(--zz) 0 0/16px 12px repeat-x}
+.rc-head{display:grid;justify-items:center;text-align:center;gap:4px;padding-bottom:18px;border-bottom:1.5px dashed #d8d0c2}
+.rc-head .logo{font-size:26px}
+.rc-head small{color:#8a8274;font-size:12px}
+.rc-title{margin-top:8px;font-size:11.5px;letter-spacing:.32em;text-transform:uppercase}
+.rc-meta,.rc-items,.rc-totals{padding:16px 0;border-bottom:1.5px dashed #d8d0c2}
+.rc-row{display:flex;justify-content:space-between;gap:16px;padding:3px 0}
+.rc-row span:first-child{color:#8a8274}
+.rc-row span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.rc-item{display:flex;justify-content:space-between;gap:16px;padding:6px 0}
+.rc-item b{display:block;font-weight:600}
+.rc-item small{display:block;color:#8a8274;font-size:12px}
+.rc-item>span{font-weight:600;font-variant-numeric:tabular-nums}
+.rc-row.disc span{color:var(--olive-2)}
+.rc-row.grand{margin-top:8px;padding-top:10px;border-top:1px solid #e8e1d4;font-size:17px;font-weight:700}
+.rc-row.grand span:first-child,.rc-row.bdt span:first-child{color:#2a2620}
+.rc-row.bdt{font-size:13px}
+.rc-note{font-size:12px;color:#8a8274;padding:4px 0}
+.rc-foot{display:grid;justify-items:center;text-align:center;gap:6px;padding-top:18px}
+.barcode{width:78%;height:44px;fill:#2a2620}
+.rc-foot>small{letter-spacing:.24em;font-size:11px;color:#6d665a}
+.rc-foot p{margin-top:8px;color:#6d665a;font-size:12.5px}
+.rc-demo{color:var(--rust)!important;letter-spacing:.04em!important;margin-top:6px}
+.od{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px}
+.od-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:28px}
+.od-top h2{font-family:var(--serif);font-weight:400;font-size:36px;letter-spacing:-.03em;line-height:1.05}
+.od-label{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:6px}
+.od-date{font-size:13px;color:var(--muted)}
+.od-steps{margin-bottom:16px}
+.od-eta{text-align:center;font-size:13.5px;color:var(--muted);padding-bottom:24px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.od-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 24px;margin-bottom:26px;font-size:14px}
+.od-grid p{overflow-wrap:anywhere}
+.od-items{margin-bottom:24px}
+.od-items .line{grid-template-columns:56px 1fr auto;padding:12px 0}
+.od-actions{display:flex;gap:10px;flex-wrap:wrap}
+.od-actions .btn{height:46px;padding:0 20px;font-size:14px}
+@media (max-width:1080px){.orders-view{grid-template-columns:minmax(0,1fr)}.rc-col{position:static;max-width:440px;width:100%;margin:0 auto 12px}}
+@media (max-width:520px){.od{padding:20px}.od-grid{grid-template-columns:minmax(0,1fr)}.od-actions .btn{flex:1 1 100%}.receipt{padding:22px 18px 26px}.od-top h2{font-size:30px}.olist{grid-auto-columns:minmax(180px,72%)}}
+/* Print: only the receipt. */
+@media print{
+  body *{visibility:hidden}
+  .receipt,.receipt *{visibility:visible}
+  .receipt{position:absolute;left:0;top:0;width:100%;max-width:420px;box-shadow:none}
+  .receipt::after{display:none}
+  .announce,header{display:none}
+}
+
+/* ---------- accounts ---------- */
+.auth{max-width:460px;margin:48px auto 80px;display:grid;gap:4px}
+.auth h1{font-family:var(--serif);font-weight:400;font-size:clamp(32px,4vw,44px);letter-spacing:-.03em;line-height:1.05}
+.auth-sub{color:var(--muted);font-size:14.5px;margin:6px 0 18px}
+.auth-tabs{margin:0 0 20px}
+.auth form{display:grid;gap:14px}
+.auth .err-msg{min-height:0;margin:-4px 0}
+.auth .err-msg:empty{display:none}
+.auth .btn{height:52px;margin-top:4px}
+.auth-warn{display:flex;gap:12px;align-items:flex-start;background:color-mix(in srgb,var(--rust) 10%,var(--paper));border:1px solid color-mix(in srgb,var(--rust) 35%,transparent);border-radius:14px;padding:14px 16px;margin:0 0 20px;font-size:13.5px;color:var(--ink);line-height:1.5}
+.auth-warn .ic{width:22px;height:22px;color:var(--rust);flex:none;margin-top:1px}
+.auth-warn b{display:block;color:var(--rust);font-size:14.5px;margin-bottom:2px}
+.auth-note{font-size:12.5px;color:var(--muted);text-align:center;margin-top:16px}
+#acctBtn.in::after{content:"";position:absolute;bottom:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--olive);box-shadow:0 0 0 2px var(--paper)}
+.acct-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.acct-head .btn{height:44px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;display:grid;gap:2px}
+.stat span{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:.03em}
+.stat b{font-family:var(--serif);font-weight:400;font-size:40px;letter-spacing:-.03em;line-height:1.1}
+.stat small{font-size:12.5px;color:var(--muted)}
+.fs-card{display:flex;gap:14px;align-items:flex-start;margin-top:14px;padding:18px 20px;border-radius:18px;background:var(--olive);color:var(--cream);font-size:14px}
+.fs-card b{display:block;font-size:15.5px;margin-bottom:2px}
+.fs-card a{text-decoration:underline;text-underline-offset:3px}
+.fs-card .ic{width:24px;height:24px;margin-top:2px}
+.fs-card.used{background:var(--cream);color:var(--muted)}
+.fs-card.used b{color:var(--ink)}
+.fs-card.used .ic{color:var(--olive)}
+.orders{display:grid;gap:10px;padding-bottom:40px}
+.orow{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:18px;align-items:center;padding:14px 18px;border:1px solid var(--line);border-radius:16px;background:var(--card);transition:border-color var(--t)}
+.orow:hover{border-color:var(--ink)}
+.othumbs{display:flex}
+.othumbs span{width:48px;height:48px;border-radius:12px;overflow:hidden;border:2px solid var(--card);background:var(--sand)}
+.othumbs span+span{margin-left:-16px}
+.othumbs img{width:100%;height:100%;object-fit:cover}
+.omain{display:grid;font-size:13px;color:var(--muted)}
+.omain b{font-size:15px;color:var(--ink)}
+.oamt{font-weight:600}
+.orow>.ic{width:16px;height:16px;color:var(--muted)}
+@media (max-width:860px){.stats{grid-template-columns:1fr 1fr}.stat b{font-size:32px}}
+@media (max-width:520px){.orow{grid-template-columns:auto 1fr auto;gap:10px 12px;padding:12px 14px}.orow .trk-badge{grid-column:2;justify-self:start;margin:0}.orow .oamt{grid-row:1;grid-column:3}.orow>.ic{display:none}.othumbs span{width:42px;height:42px}.stat{padding:16px}.auth{margin-top:28px}}
+
+/* ---------- quantity + quick view ---------- */
+.stepper.qty{height:48px;border-radius:12px;background:var(--card)}
+.stepper.qty button{width:46px}
+.stepper.qty button .ic{width:16px;height:16px}
+.stepper.qty span{min-width:34px;font-size:16px}
+.stepper button:disabled{opacity:.3;pointer-events:none}
+.buybox .buyrow{margin-top:22px;flex-wrap:wrap}
+.buybox .buyrow .btn{flex:1 1 180px}
+.buybox .buyrow .heart{flex:none}
+.qv{position:fixed;inset:0;z-index:75;display:none;place-items:center;padding:24px}
+.qv.open{display:grid}
+.qv>.scrim{opacity:1;pointer-events:auto;z-index:0}
+.qv-box{position:relative;z-index:1;width:min(980px,100%);max-height:calc(100vh - 48px);overflow-y:auto;background:var(--paper);border-radius:24px;box-shadow:0 30px 80px rgba(20,14,8,.35);animation:gwIn .2s var(--ease);overscroll-behavior:contain}
+.qv-x{position:absolute;top:14px;right:14px;z-index:2;background:var(--paper);box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.qv-grid{display:grid;grid-template-columns:1fr 1.05fr}
+.qv-shot{position:relative;background:var(--sand);min-height:100%}
+.qv-shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.qv-info{padding:36px 36px 32px;display:flex;flex-direction:column;align-items:flex-start}
+.qv-info>*{width:100%}
+.qv-info .rating,.qv-info .more{width:auto}
+.qv-cat{font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--olive-2)}
+.qv-info h2{font-family:var(--serif);font-weight:400;font-size:clamp(30px,3.4vw,42px);line-height:1.02;letter-spacing:-.03em;margin:8px 0 10px;padding-right:40px}
+.qv-info .pr{display:flex;align-items:baseline;gap:12px;font-size:22px;font-weight:600;margin:14px 0 4px}
+.qv-info .pr s{font-size:16px;font-weight:400;color:var(--muted)}
+.qv-info .pr .off{font-size:11.5px;font-weight:700;color:#fff;background:var(--rust);padding:3px 9px;border-radius:999px;align-self:center}
+.qv-info .lede{color:var(--muted);margin-top:8px;font-size:14.5px}
+.qv-specs{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
+.qv-specs li{background:var(--cream);border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:600}
+.qv-specs span{display:block;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:.03em}
+.qv-info .opt-h{margin-top:22px}
+.qv-info .more{margin-top:22px}
+@media (max-width:860px){
+  .qv{padding:0;place-items:end stretch}
+  .qv-box{width:100%;max-height:92vh;border-radius:22px 22px 0 0;animation:sheetIn .24s var(--ease)}
+  @keyframes sheetIn{from{transform:translateY(40px);opacity:0}}
+  .qv-grid{grid-template-columns:minmax(0,1fr)}
+  .qv-shot{min-height:0;aspect-ratio:4/3}
+  .qv-info{padding:22px 20px 28px}
+}
 
 /* ---------- order confirmation + tracking ---------- */
 .done-ctas{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
@@ -453,7 +599,7 @@ label textarea.bad{border-color:var(--rust)}
 @keyframes gwIn{from{opacity:0;transform:translateY(12px) scale(.98)}}
 .gw-top{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 0 24px}
 .gw-tag{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--rust)}
-.gw-m{font-family:var(--serif);font-weight:500;font-size:22px;letter-spacing:-.02em}
+.gw-m{font-family:var(--serif);font-weight:500;font-size:22px;letter-spacing:-.02em;display:inline-flex;align-items:baseline;line-height:1.2}
 .gw-m i{font-style:normal;color:var(--rust)}
 .gw-amt{margin:14px 24px 0;padding:18px 20px;border-radius:16px;background:var(--olive);color:var(--cream);display:grid}
 .gw-amt span{font-size:12.5px;opacity:.75}
@@ -519,11 +665,14 @@ label textarea.bad{border-color:var(--rust)}
   .nav{gap:18px}
   .story .txt{padding:48px}
 }
-@media (max-width:860px){
-  .wrap{padding:0 20px}
+/* Tighter link spacing on mid-size laptops keeps all 8 links on one line beside the centred logo. */
+@media (max-width:1300px){.nav{gap:17px;font-size:13.5px}}
+/* Below this, 8 links no longer fit beside the centred logo: switch to the hamburger menu. */
+@media (max-width:1220px){
   /* static: the open menu then anchors to the full-width header, not the padded row, so it spans the screen exactly */
-  .bar{grid-template-columns:auto 1fr auto;gap:8px;position:static}
-  .menu-btn{display:grid}
+  /* Equal side columns keep the logo centred on the page, not just between the side items. */
+  .bar{grid-template-columns:1fr auto 1fr;gap:8px;position:static}
+  .menu-btn{display:grid;justify-self:start}
   .logo{justify-self:center;font-size:25px}
   /* The bar is the full-width .wrap, so 0/0 already spans the screen; the padding insets the links. */
   .nav{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;background:var(--paper);border-bottom:1px solid var(--line);box-shadow:0 12px 24px rgba(31,26,20,.08);padding:4px 20px 12px;max-height:calc(100vh - 110px);overflow-y:auto}
@@ -532,6 +681,10 @@ label textarea.bad{border-color:var(--rust)}
   .nav a{padding:14px 0;font-size:17px;border-bottom:1px solid var(--line)}
   .nav a:last-child{border-bottom:0}
   .nav a::after{display:none}
+  .nav a[aria-current=page]{color:var(--olive)}
+}
+@media (max-width:860px){
+  .wrap{padding:0 20px}
   .values .wrap{grid-template-columns:1fr 1fr}
   .values div:nth-child(3){border-left:0}
   .values div:nth-child(n+3){border-top:1px solid var(--line)}
@@ -582,7 +735,8 @@ label textarea.bad{border-color:var(--rust)}
 </style>
 </head>
 <body>
-<div class="announce">Free shipping over <b>$100</b> &nbsp;·&nbsp; Free 30-day returns &nbsp;·&nbsp; Code <b>FIRSTSTEP</b> takes 15% off</div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="gr" viewBox="0 0 100 50"><path fill-rule="evenodd" d="M0 9 9 0H44L39 10H13V40H31V33H22L27 24H44V37L39.67 50H9L0 41ZM60.33 0H88L96 8V25L89 31L99 50H85L77 33H63V50H50V31ZM63 10V24H81L84 21V13L81 10Z"/></symbol></svg>
+<div class="announce">Free shipping over <b>$100</b> &nbsp;·&nbsp; Free 30-day returns<span id="annCode"> &nbsp;·&nbsp; Code <b>FIRSTSTEP</b> takes 15% off</span></div>
 <header>
   <div class="wrap bar">
     <nav class="nav" id="nav" aria-label="Main">
@@ -592,14 +746,16 @@ label textarea.bad{border-color:var(--rust)}
       <a href="#/shop/canvas">Canvas</a>
       <a href="#/shop/leather">Leather</a>
       <a href="#/shop/sale" class="sale">Sale</a>
+      <a href="#/orders">My orders</a>
       <a href="#/help">Help</a>
     </nav>
     <button class="tbtn menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false"><span class="burger" aria-hidden="true"><i></i><i></i><i></i></span></button>
-    <a class="logo" href="#/" aria-label="Grounded home">grounded<i>.</i></a>
+    <a class="logo" href="#/" aria-label="Grounded home"><svg class="gr" viewBox="0 0 100 50" aria-hidden="true"><use href="#gr"/></svg>ounded<i>.</i></a>
     <div class="tools">
       <button class="tbtn" id="searchBtn" aria-label="Search"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
       <a class="tbtn hide-sm" href="#/shop/saved" aria-label="Saved items"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span class="count" id="savedCount"></span></a>
-      <button class="tbtn" id="cartBtn" aria-label="Open bag"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="count" id="cartCount"></span></button>
+      <a class="tbtn" id="acctBtn" href="#/account" aria-label="Log in"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>
+      <button class="tbtn" id="cartBtn" aria-label="Open cart"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="count" id="cartCount"></span></button>
     </div>
   </div>
   <div class="searchbar" id="searchbar">
@@ -616,7 +772,7 @@ label textarea.bad{border-color:var(--rust)}
   <div class="wrap">
     <div class="fgrid">
       <div>
-        <a class="logo" href="#/">grounded<i>.</i></a>
+        <a class="logo" href="#/" aria-label="Grounded home"><svg class="gr" viewBox="0 0 100 50" aria-hidden="true"><use href="#gr"/></svg>ounded<i>.</i></a>
         <p style="max-width:34ch">Sneakers in earthy tones, made in small runs and built to be worn hard.</p>
       </div>
       <div><h4>Shop</h4><ul><li><a href="#/shop/new">New In</a></li><li><a href="#/shop/lifestyle">Lifestyle</a></li><li><a href="#/shop/running">Running</a></li><li><a href="#/shop/sale">Sale</a></li></ul></div>
@@ -628,8 +784,8 @@ label textarea.bad{border-color:var(--rust)}
 
 <div id="cart" aria-hidden="true">
   <div class="scrim" data-act="close"></div>
-  <aside class="drawer" role="dialog" aria-label="Shopping bag">
-    <div class="drawer-h"><h2>Your bag<span id="bagN"></span></h2><button class="tbtn" data-act="close" aria-label="Close bag"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <aside class="drawer" role="dialog" aria-label="Shopping cart">
+    <div class="drawer-h"><h2>Your cart<span id="bagN"></span></h2><button class="tbtn" data-act="close" aria-label="Close cart"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div id="shipbar"></div>
     <div class="lines" id="lines"></div>
     <div class="drawer-f" id="cartFoot"></div>
@@ -638,13 +794,17 @@ label textarea.bad{border-color:var(--rust)}
 <div class="demo-banner" id="demoBanner" role="alert">
   <div class="wrap">
     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg>
-    <p><b>Demo payment gateway.</b> Don't enter real card details, PINs or passwords. Nothing is charged. Use test card <code>4242 4242 4242 4242</code>.</p>
+    <p><b>Demo payment gateway.</b> Don't enter real card details, PINs or passwords. Nothing is charged, and any made-up card number works (e.g. <code>4242 4242 4242 4242</code>).</p>
     <button type="button" data-banner aria-label="Dismiss notice"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:18px;height:18px"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
 </div>
 <div class="pay" id="pay" aria-hidden="true">
   <div class="scrim" data-gw="cancel"></div>
   <div class="gw" id="gw" role="dialog" aria-modal="true" aria-label="Demo payment"></div>
+</div>
+<div class="qv" id="qv" aria-hidden="true">
+  <div class="scrim" data-qvclose></div>
+  <div class="qv-box" id="qvBox" role="dialog" aria-modal="true" aria-labelledby="qvTitle"></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 

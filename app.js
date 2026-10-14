@@ -39,6 +39,8 @@
     box: '<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5M12 12v9"/>',
     pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
     home: '<path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
     star: '<path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/>',
   };
   const ic = (n, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
@@ -73,7 +75,7 @@
     const k = `${id}|${size}`;
     setQty(k, (cart[k] || 0) + q);
     bump("#cartCount");
-    toast(`${byId[id].name}, US ${size}, added to bag`);
+    toast(`${byId[id].name}, US ${size}${q > 1 ? ` × ${q}` : ""}, added to cart`);
   }
   function toggleSave(id) {
     saved.has(id) ? saved.delete(id) : saved.add(id);
@@ -100,7 +102,7 @@
   const card = p => `
     <article class="pc">
       <div class="media">
-        <a href="#/p/${p.id}" aria-label="${esc(p.name)}">${img(p.img, 400, 500, p.name)}</a>
+        <a href="#/p/${p.id}" data-qv="${p.id}" aria-label="Quick view: ${esc(p.name)}">${img(p.img, 400, 500, p.name)}</a>
         ${p.was ? `<span class="pill sale">-${Math.round(100 - p.price / p.was * 100)}%</span>` : p.tag ? `<span class="pill">${p.tag}</span>` : ""}
         <button class="heart" data-save="${p.id}" aria-pressed="${saved.has(p.id)}" aria-label="Save ${esc(p.name)}">${ic("heart")}</button>
         <div class="quick">
@@ -181,10 +183,14 @@
       <section class="sec"><div class="wrap">
         <div class="story">
           <div class="txt">
+            ${firstStepUsed() ? `
+            <span class="eyebrow">Back again</span>
+            <h2>Ready for your <em>next</em> pair?</h2>
+            <p>Every order ships in a recycled box with free shipping over $${FREE_SHIP} and free 30-day returns, so finding your size never costs a thing.</p>` : `
             <span class="eyebrow">The first pair</span>
             <h2>Your first pair is <em>on us</em>, almost.</h2>
             <p>New here? Take 15% off your first order. Every pair ships in a recycled box with free returns, so finding your size costs nothing.</p>
-            <span class="code">Use code <b>FIRSTSTEP</b> at checkout</span>
+            <span class="code">Use code <b>FIRSTSTEP</b> at checkout</span>`}
             <a class="btn light" href="#/shop/all">Find your pair ${ic("arrow", "arr")}</a>
           </div>
           <div class="pic">${img(media.story, 700, 620, "Sneakers on a road with white painted lines")}</div>
@@ -201,7 +207,7 @@
 
       <section class="sec"><div class="wrap">
         <div class="sec-h">
-          <div><h2>Trending <em>now</em></h2><p>What everyone's adding to their bag this week.</p></div>
+          <div><h2>Trending <em>now</em></h2><p>What everyone's adding to their cart this week.</p></div>
           <div class="arrows"><button data-rail="-1" aria-label="Scroll left">${ic("left")}</button><button data-rail="1" aria-label="Scroll right">${ic("arrow")}</button></div>
         </div>
         <div class="rail" id="rail">${trending.map(card).join("")}</div>
@@ -294,12 +300,80 @@
       : `<div class="empty"><h2>Nothing here yet</h2>${q ? "No pairs match that search. Try a colour, like “sand” or “white”." : "Heart a pair and it'll show up here."}<br><a class="btn dark" href="#/shop/all">Browse all sneakers</a></div>`;
   }
 
+  // ---------- buy box (size + quantity + actions), shared by product page and quick view ----------
+  // Each box keeps its own size/qty in data attributes, so a quick view opened over a product page
+  // never fights with that page's own selector.
+  const MAX_QTY = 10;
+  const buyBox = p => `
+    <div class="buybox" data-buybox="${p.id}" data-qty="1">
+      <div class="opt-h">Select size (US)<a href="#/help/size" class="sg">Size guide</a></div>
+      <div class="sizegrid">${SIZES.map(s => soldOut(p, s)
+        ? `<button disabled aria-label="US ${s}, sold out">${s}</button>`
+        : `<button data-pick="${s}" aria-pressed="false">${s}</button>`).join("")}</div>
+      <div class="err-msg" role="alert"></div>
+      <div class="opt-h">Quantity<span>In stock &middot; ships in 24h</span></div>
+      <div class="stepper qty" role="group" aria-label="Quantity">
+        <button data-qty="-1" aria-label="Decrease quantity" disabled>${ic("minus")}</button><span data-qtyval aria-live="polite">1</span><button data-qty="1" aria-label="Increase quantity">${ic("plus")}</button>
+      </div>
+      <div class="buyrow">
+        <button class="btn dark" data-buy>${ic("bag")}<span>Add to cart &middot; ${money(p.price)}</span></button>
+        <button class="btn olive" data-buynow>Buy now</button>
+        <button class="heart" data-save="${p.id}" aria-pressed="${saved.has(p.id)}" aria-label="Save ${esc(p.name)}">${ic("heart")}</button>
+      </div>
+    </div>`;
+  // Returns { p, size, qty } or null after flagging the missing size.
+  function boxChoice(box) {
+    const p = byId[box.dataset.buybox], size = box.dataset.size, qty = +box.dataset.qty;
+    if (!size) {
+      box.querySelector(".sizegrid").classList.add("err");
+      box.querySelector(".err-msg").textContent = "Please choose a size first.";
+      return null;
+    }
+    return { p, size, qty };
+  }
+
+  // ---------- quick view ----------
+  function openQuick(id) {
+    const p = byId[id];
+    if (!p) return;
+    $("#qvBox").innerHTML = `
+      <button class="tbtn qv-x" data-qvclose aria-label="Close">${ic("x")}</button>
+      <div class="qv-grid">
+        <div class="qv-shot">${img(p.img, 560, 640, p.name, true)}
+          ${p.was ? `<span class="pill sale">-${Math.round(100 - p.price / p.was * 100)}%</span>` : p.tag ? `<span class="pill">${p.tag}</span>` : ""}</div>
+        <div class="qv-info">
+          <span class="qv-cat">${cats[p.cat].name} &middot; ${esc(p.color)}</span>
+          <h2 id="qvTitle">${esc(p.name)}</h2>
+          <span class="rating">${ic("star").repeat(5)} ${p.rating} &middot; ${p.reviews.toLocaleString()} reviews</span>
+          <div class="pr">${money(p.price)}${p.was ? `<s>${money(p.was)}</s><span class="off">SAVE ${money(p.was - p.price)}</span>` : ""}</div>
+          <p class="lede">${esc(p.desc)}</p>
+          <ul class="qv-specs">
+            <li><span>Colourway</span>${esc(p.color)}</li>
+            <li><span>Outsole</span>Recycled rubber</li>
+            <li><span>Insole</span>Removable, cushioned</li>
+            <li><span>Style code</span>GR-${String(p.idx + 101).padStart(4, "0")}</li>
+          </ul>
+          ${buyBox(p)}
+          <a class="more" href="#/p/${p.id}">View full details ${ic("arrow")}</a>
+        </div>
+      </div>`;
+    $("#qv").classList.add("open"); $("#qv").setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    $("#qvBox").scrollTop = 0;
+    $("#qvBox .qv-x").focus({ preventScroll: true });
+  }
+  function closeQuick() {
+    if (!$("#qv").classList.contains("open")) return false;
+    $("#qv").classList.remove("open"); $("#qv").setAttribute("aria-hidden", "true");
+    $("#qvBox").innerHTML = "";
+    document.body.style.overflow = "";
+    return true;
+  }
+
   // ---------- product ----------
-  let pick = null;
   function viewProduct(id) {
     const p = byId[id];
     if (!p) return viewMissing();
-    pick = null;
     document.title = `${p.name} · Grounded`;
     const related = products.filter(x => x.cat === p.cat && x.id !== p.id).concat(products.filter(x => x.cat !== p.cat)).slice(0, 4);
     app.innerHTML = `
@@ -314,16 +388,7 @@
             <div class="pr">${money(p.price)}${p.was ? `<s>${money(p.was)}</s><span class="off">SAVE ${money(p.was - p.price)}</span>` : ""}</div>
             <p class="lede">${esc(p.desc)}</p>
 
-            <div class="opt-h">Select size (US)<a href="#/help/size" class="sg">Size guide</a></div>
-            <div class="sizegrid" id="sizes">${SIZES.map(s => soldOut(p, s)
-              ? `<button disabled aria-label="US ${s}, sold out">${s}</button>`
-              : `<button data-pick="${s}" aria-pressed="false">${s}</button>`).join("")}</div>
-            <div class="err-msg" id="sizeErr" role="alert"></div>
-
-            <div class="buyrow">
-              <button class="btn dark" data-buy="${p.id}">${ic("bag")}Add to bag &middot; ${money(p.price)}</button>
-              <button class="heart" data-save="${p.id}" aria-pressed="${saved.has(p.id)}" aria-label="Save ${esc(p.name)}">${ic("heart")}</button>
-            </div>
+            ${buyBox(p)}
 
             <div class="assure">
               <div>${ic("truck")}Free shipping over $${FREE_SHIP}</div>
@@ -345,14 +410,274 @@
       </div>`;
   }
 
+  // ---------- accounts (demo: stored in this browser only) ----------
+  // There's no server, so accounts live in localStorage. Passwords are salted and SHA-256 hashed
+  // before saving, never stored as typed. Fine for a demo; a real store needs server-side auth.
+  const users = () => store.get("users", {});
+  const me = () => { const e = store.get("session", null); return e ? users()[e] || null : null; };
+  const saveUser = u => store.set("users", { ...users(), [u.email]: u });
+  const firstStepUsed = () => !!me()?.firstStepOrder;
+  const myOrders = () => { const u = me(); return u ? Object.values(store.get("orders", {})).filter(o => o.user === u.email).sort((a, b) => b.created - a.created) : []; };
+  async function hashPw(pw, salt) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${pw}`));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  function syncAccountUI() {
+    const u = me();
+    $("#annCode").hidden = firstStepUsed();
+    const b = $("#acctBtn");
+    b.classList.toggle("in", !!u);
+    b.setAttribute("aria-label", u ? `Your account (${u.name})` : "Log in");
+  }
+
+  let authState = { mode: "login", next: "#/account", heading: "Welcome back", sub: "Log in to see your orders and check out faster." };
+  const authPanel = () => {
+    const { mode, next, heading, sub } = authState, signup = mode === "signup";
+    return `
+      <div class="auth panel">
+        <h1>${heading}</h1>
+        <p class="auth-sub">${sub}</p>
+        <div class="gw-tabs auth-tabs" role="tablist">
+          <button type="button" role="tab" data-authmode="login" aria-selected="${!signup}">Log in</button>
+          <button type="button" role="tab" data-authmode="signup" aria-selected="${signup}">Create account</button>
+        </div>
+        <div class="auth-warn" role="note">
+          ${ic("shield")}
+          <p><b>Demo store: don't use real details.</b> Make up a name and email, and never reuse a password you use anywhere else. Accounts here are for testing only and are saved in this browser.</p>
+        </div>
+        <form id="authForm" data-mode="${mode}" data-next="${next}" novalidate>
+          ${signup ? `<label>Full name<input name="name" autocomplete="name" required></label>` : ""}
+          <label>Email<input name="email" type="email" autocomplete="email" required></label>
+          <label><span>Password${signup ? " <i>(at least 8 characters)</i>" : ""}</span><input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required></label>
+          <div class="err-msg" role="alert"></div>
+          <button class="btn dark block" type="submit">${signup ? "Create account" : "Log in"} ${ic("arrow", "arr")}</button>
+        </form>
+        <p class="auth-note">Example: test@example.com with any made-up password of 8+ characters.</p>
+      </div>`;
+  };
+  function renderAuth() { app.innerHTML = `<div class="wrap">${authPanel()}</div>`; app.querySelector("input")?.focus(); }
+
+  async function handleAuth(f) {
+    const signup = f.dataset.mode === "signup", err = f.querySelector(".err-msg");
+    const email = f.email.value.trim().toLowerCase(), pw = f.password.value, name = f.elements.name?.value.trim();
+    const fail = (m, field) => { err.textContent = m; if (field) { field.classList.add("bad"); field.focus(); } };
+    if (signup && !name) return fail("Enter your name.", f.elements.name);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address.", f.email);
+    if (pw.length < 8) return fail("Password must be at least 8 characters.", f.password);
+    if (!window.crypto?.subtle) return fail("Sign-in needs a secure page. Open the site over https or localhost.");
+    const all = users();
+    if (signup) {
+      if (all[email]) return fail("An account with this email already exists. Log in instead.", f.email);
+      const salt = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, "0")).join("");
+      saveUser({ email, name, salt, hash: await hashPw(pw, salt), created: Date.now(), firstStepOrder: null });
+    } else {
+      const u = all[email];
+      // One message for both cases, so the form doesn't reveal which emails have accounts.
+      if (!u || u.hash !== await hashPw(pw, u.salt)) return fail("Email or password is incorrect.", f.password);
+    }
+    store.set("session", email);
+    authState.mode = "login"; // next time the form opens, default to logging in
+    syncAccountUI();
+    toast(`${signup ? "Welcome to Grounded" : "Welcome back"}, ${me().name.split(" ")[0]}`);
+    const next = f.dataset.next || "#/account";
+    if (location.hash === next) route(); else location.hash = next;
+  }
+
+  function viewAccount() {
+    const u = me();
+    document.title = "Your account · Grounded";
+    if (!u) {
+      authState = { mode: authState.mode, next: "#/account", heading: "Welcome back", sub: "Log in to see your orders and check out faster." };
+      return renderAuth();
+    }
+    const orders = myOrders();
+    const delivered = orders.filter(o => trackStage(o) === STAGES.length - 1).length;
+    const spent = orders.reduce((s, o) => s + o.total, 0);
+    app.innerHTML = `
+      <div class="wrap">
+        <div class="page-h acct-head">
+          <div>
+            <nav class="crumbs"><a href="#/">Home</a><span>/</span><span>Account</span></nav>
+            <h1>Hi, <em class="hl">${esc(u.name.split(" ")[0])}</em></h1>
+            <p>${esc(u.email)} &middot; member since ${new Date(u.created).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</p>
+          </div>
+          <button class="btn outline" data-act="logout">Log out</button>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><span>Orders placed</span><b>${orders.length}</b></div>
+          <div class="stat"><span>Delivered</span><b>${delivered}</b></div>
+          <div class="stat"><span>On the way</span><b>${orders.length - delivered}</b></div>
+          <div class="stat"><span>Total spent</span><b>${money(spent)}</b><small>${taka(spent)}</small></div>
+        </div>
+
+        <div class="fs-card ${u.firstStepOrder ? "used" : ""}">
+          ${ic(u.firstStepOrder ? "check" : "bag")}
+          <div>${u.firstStepOrder
+            ? `<b>First-order code used</b>You saved 15% with FIRSTSTEP on order <a href="#/track/${u.firstStepOrder}">#${u.firstStepOrder}</a>. It can only be used once per account.`
+            : `<b>FIRSTSTEP is ready</b>Take 15% off your first order. Enter it at checkout; it works once per account.`}</div>
+        </div>
+
+        <section class="sec" style="padding-top:56px">
+          <div class="sec-h"><div><h2>Your <em>orders</em></h2></div></div>
+          ${orders.length ? `<div class="orders">${orders.map(o => {
+            const st = trackStage(o), n = (o.items || []).reduce((s, i) => s + i.q, 0);
+            return `
+              <a class="orow" href="#/orders/${o.id}">
+                <div class="othumbs">${(o.items || []).slice(0, 3).map(i => byId[i.id] ? `<span>${img(byId[i.id].img, 96, 96, byId[i.id].name)}</span>` : "").join("")}</div>
+                <div class="omain"><b>#${o.id}</b><span>${fmtDay(o.created)} &middot; ${n} ${n === 1 ? "pair" : "pairs"}${o.promo ? ` &middot; ${o.promo}` : ""}</span></div>
+                <span class="trk-badge${st === STAGES.length - 1 ? " done" : ""}">${STAGES[st][0]}</span>
+                <span class="oamt">${money(o.total)}</span>
+                ${ic("arrow")}
+              </a>`; }).join("")}</div>`
+            : `<div class="empty" style="padding:48px 16px"><h2>No orders yet</h2>Your orders and their delivery status will show up here.<br><a class="btn dark" href="#/shop/all">Shop sneakers</a></div>`}
+        </section>
+      </div>`;
+  }
+
+  // ---------- my orders: receipt (left) + details (right) ----------
+  let ordersTab = "all";
+  const isDelivered = o => trackStage(o) === STAGES.length - 1;
+  // Older orders (placed before receipts were added) lack snapshots; fall back to catalog data.
+  const itemOf = i => ({ ...i, name: i.name || byId[i.id]?.name || "Item", color: i.color || byId[i.id]?.color || "", price: i.price ?? byId[i.id]?.price ?? 0 });
+  // A decorative barcode derived from the tracking number (same code always draws the same bars).
+  const barcode = code => {
+    let x = 0, bars = "";
+    for (const ch of code + code) { const w = 1 + (ch.charCodeAt(0) % 3); bars += `<rect x="${x}" width="${w}" height="40"/>`; x += w + 1 + (ch.charCodeAt(0) % 2); }
+    return `<svg class="barcode" viewBox="0 0 ${x} 40" preserveAspectRatio="none" aria-hidden="true">${bars}</svg>`;
+  };
+
+  function receipt(o) {
+    const items = (o.items || []).map(itemOf);
+    const b = o.breakdown, sub = b ? b.sub : items.reduce((s, i) => s + i.price * i.q, 0);
+    const row = (l, v, cls = "") => `<div class="rc-row ${cls}"><span>${l}</span><span>${v}</span></div>`;
+    return `
+      <article class="receipt" aria-label="Receipt for order ${o.id}">
+        <header class="rc-head">
+          <span class="logo"><svg class="gr" viewBox="0 0 100 50" aria-hidden="true"><use href="#gr"/></svg>ounded<i>.</i></span>
+          <small>Grounded Footwear &middot; Dhaka, Bangladesh</small>
+          <b class="rc-title">Receipt</b>
+        </header>
+        <div class="rc-meta">
+          ${row("Order", `#${o.id}`)}
+          ${row("Date", fmtTime(o.created))}
+          ${row("Customer", esc(`${o.first || ""} ${o.last || ""}`.trim()))}
+          ${row("Payment", esc(o.paidWith || "Demo payment"))}
+        </div>
+        <div class="rc-items">
+          ${items.map(i => `
+            <div class="rc-item">
+              <div><b>${esc(i.name)}</b><small>US ${i.size}${i.color ? ` &middot; ${esc(i.color)}` : ""}</small><small>${i.q} &times; ${money(i.price)}</small></div>
+              <span>${money(i.price * i.q)}</span>
+            </div>`).join("")}
+        </div>
+        <div class="rc-totals">
+          ${row("Subtotal", money(sub))}
+          ${b ? `${b.disc ? row(`Discount${o.promo ? ` (${esc(o.promo)})` : ""}`, `&minus;${money(b.disc)}`, "disc") : ""}
+          ${row(`Shipping${o.express ? " (Express)" : ""}`, b.ship ? money(b.ship) : "Free")}
+          ${row("Tax (8%)", money(b.tax))}` : `<p class="rc-note">Detailed breakdown isn't available for orders placed before receipts were added.</p>`}
+          ${row("Total", money(o.total), "grand")}
+          ${row("Paid in BDT", taka(o.total), "bdt")}
+        </div>
+        <footer class="rc-foot">
+          ${barcode(o.tracking || o.id)}
+          <small>${o.tracking || o.id}</small>
+          <p>Thank you for shopping with us.<br>Free returns within 30 days of delivery.</p>
+          <small class="rc-demo">Demo receipt &middot; no real payment was taken</small>
+        </footer>
+      </article>`;
+  }
+
+  function orderDetails(o) {
+    const st = trackStage(o), done = isDelivered(o);
+    const eta = o.created + (o.express ? 1 : 3) * 864e5;
+    const items = (o.items || []).map(itemOf);
+    return `
+      <div class="od">
+        <div class="od-top">
+          <div><span class="od-label">Order</span><h2>#${o.id}</h2><span class="od-date">Placed ${fmtTime(o.created)}</span></div>
+          <span class="trk-badge${done ? " done" : ""}">${STAGES[st][0]}</span>
+        </div>
+        <ol class="trk-steps od-steps" style="--p:${st / (STAGES.length - 1) * 100}%">${STAGES.map(([n, icon], i) => `
+          <li class="${i < st ? "past" : i === st ? "now" : ""}"><i>${ic(icon)}</i><span>${n}</span></li>`).join("")}
+        </ol>
+        <p class="od-eta">${done ? `Delivered ${fmtTime(stageTime(o, STAGES.length - 1))}` : `Estimated delivery: <b>${fmtDay(eta)}</b>`} &middot; ${o.express ? "Express" : "Standard"} shipping</p>
+
+        <div class="od-grid">
+          <div><span class="od-label">Ship to</span><p>${esc(`${o.first || ""} ${o.last || ""}`.trim())}<br>${esc(o.address || "")}<br>${esc(o.city || "")} ${esc(o.zip || "")}</p></div>
+          <div><span class="od-label">Contact</span><p>${esc(o.email || "")}</p></div>
+          <div><span class="od-label">Tracking number</span><p>${o.tracking || "-"}</p></div>
+          <div><span class="od-label">Payment</span><p>${esc(o.paidWith || "Demo payment")}<br>${money(o.total)} &middot; ${taka(o.total)}</p></div>
+        </div>
+
+        <span class="od-label">Items</span>
+        <div class="od-items">${items.map(i => byId[i.id] ? `
+          <a class="line" href="#/p/${i.id}"><div class="th">${img(byId[i.id].img, 128, 128, i.name)}</div>
+            <div><h4>${esc(i.name)}</h4><div class="meta">US ${i.size} &middot; Qty ${i.q}</div></div><span class="amt">${money(i.price * i.q)}</span></a>` : "").join("")}
+        </div>
+
+        <div class="od-actions">
+          <a class="btn olive" href="#/track/${o.id}">${ic("truck")}Track package</a>
+          <button class="btn outline" data-act="print">Print receipt</button>
+          <button class="btn outline" data-reorder="${o.id}">${ic("bag")}Buy again</button>
+        </div>
+      </div>`;
+  }
+
+  function viewOrders(id) {
+    document.title = "My orders · Grounded";
+    $$(".nav a").forEach(a => a.getAttribute("href") === "#/orders" && a.setAttribute("aria-current", "page"));
+    if (!me()) {
+      authState = { mode: authState.mode, next: location.hash || "#/orders", heading: "Log in to see your orders", sub: "Your receipts and delivery updates are saved to your account." };
+      return renderAuth();
+    }
+    const all = myOrders();
+    if (!all.length) {
+      app.innerHTML = `<div class="wrap"><div class="page-h"><h1>My <em class="hl">orders</em></h1></div><div class="empty" style="padding-top:20px"><h2>No orders yet</h2>When you place an order, its receipt and delivery status will appear here.<br><a class="btn dark" href="#/shop/all">Shop sneakers</a></div></div>`;
+      return;
+    }
+    const current = all.filter(o => !isDelivered(o)), past = all.filter(isDelivered);
+    const list = ordersTab === "current" ? current : ordersTab === "past" ? past : all;
+    const sel = list.find(o => o.id === id) || (!list.length && all.find(o => o.id === id)) || list[0] || all[0];
+    app.innerHTML = `
+      <div class="wrap">
+        <div class="page-h">
+          <nav class="crumbs"><a href="#/">Home</a><span>/</span><a href="#/account">Account</a><span>/</span><span>My orders</span></nav>
+          <h1>My <em class="hl">orders</em></h1>
+          <p>${all.length} ${all.length === 1 ? "order" : "orders"} &middot; ${current.length} on the way &middot; ${past.length} delivered</p>
+        </div>
+        <div class="tabs" role="group" aria-label="Filter orders" style="margin-bottom:14px">
+          ${[["all", "All", all.length], ["current", "On the way", current.length], ["past", "Delivered", past.length]].map(([k, n, c]) =>
+            `<button class="tab" data-otab="${k}" aria-pressed="${ordersTab === k}">${n} <span class="tab-n">${c}</span></button>`).join("")}
+        </div>
+        <div class="olist">${list.length ? list.map(o => `
+          <a class="ochip" href="#/orders/${o.id}"${o.id === sel.id ? ' aria-current="true"' : ""}>
+            <b>#${o.id}</b><span>${fmtDay(o.created)}</span>
+            <span class="ochip-foot"><i class="dot${isDelivered(o) ? " done" : ""}"></i>${STAGES[trackStage(o)][0]}<em>${money(o.total)}</em></span>
+          </a>`).join("") : `<p class="results-n">No ${ordersTab === "past" ? "delivered" : "current"} orders.</p>`}
+        </div>
+        <div class="orders-view">
+          <div class="rc-col">${receipt(sel)}</div>
+          ${orderDetails(sel)}
+        </div>
+      </div>`;
+  }
+
   // ---------- checkout ----------
   let express = false;
   function viewCheckout() {
     if (!lines().length) {
-      app.innerHTML = `<div class="wrap"><div class="empty"><h2>Your bag is empty</h2>Add a pair or two, then come back.<br><a class="btn dark" href="#/shop/all">Shop sneakers</a></div></div>`;
+      app.innerHTML = `<div class="wrap"><div class="empty"><h2>Your cart is empty</h2>Add a pair or two, then come back.<br><a class="btn dark" href="#/shop/all">Shop sneakers</a></div></div>`;
       return;
     }
-    const a = store.get("addr", {});
+    const u = me();
+    if (!u) {
+      authState = { mode: authState.mode, next: "#/checkout", heading: "Log in to check out", sub: "You need an account to place an order, so we can track it for you. Your cart is saved." };
+      return renderAuth();
+    }
+    if (promo === "FIRSTSTEP" && firstStepUsed()) { promo = null; store.set("promo", null); }
+    const [uFirst, ...uLast] = u.name.split(" ");
+    const a = { first: uFirst, last: uLast.join(" "), email: u.email, ...store.get("addr:" + u.email, {}) };
     const f = (n, l, type = "text", cls = "", ac = "") =>
       `<label class="${cls}">${l}<input name="${n}" type="${type}" required autocomplete="${ac}" value="${esc(a[n] || "")}"></label>`;
     app.innerHTML = `
@@ -446,14 +771,15 @@
   let trackTimer;
   function viewTrack(id) {
     if (!id) {
-      const orders = Object.values(store.get("orders", {})).sort((a, b) => b.created - a.created);
+      const orders = myOrders();
       app.innerHTML = `
         <div class="wrap">
           <div class="page-h"><nav class="crumbs"><a href="#/">Home</a><span>/</span><span>Track order</span></nav><h1>Track your <em class="hl">package</em></h1>
             <p>Enter the order number from your confirmation email.</p></div>
           <form class="track-find" id="trackFind"><input name="oid" placeholder="Order number, e.g. GR4K2Z9Q" aria-label="Order number" autocomplete="off"><button class="btn dark" type="submit">Track</button></form>
-          ${orders.length ? `<div class="recent"><span>Recent orders on this device</span>${orders.slice(0, 5).map(o =>
-            `<a href="#/track/${o.id}"><b>#${o.id}</b>${fmtDay(o.created)} &middot; ${STAGES[trackStage(o)][0]}${ic("arrow")}</a>`).join("")}</div>` : ""}
+          ${orders.length ? `<div class="recent"><span>Your recent orders</span>${orders.slice(0, 5).map(o =>
+            `<a href="#/track/${o.id}"><b>#${o.id}</b>${fmtDay(o.created)} &middot; ${STAGES[trackStage(o)][0]}${ic("arrow")}</a>`).join("")}</div>`
+            : me() ? "" : `<p class="results-n" style="padding-bottom:60px"><a class="more" href="#/account">Log in to see all your orders ${ic("arrow")}</a></p>`}
         </div>`;
       return;
     }
@@ -513,7 +839,7 @@
     app.innerHTML = `<div class="wrap"><div class="empty"><h2>Wrong turn</h2>We couldn't find that page.<br><a class="btn dark" href="#/">Back to the shop</a></div></div>`;
   }
 
-  // ---------- bag drawer ----------
+  // ---------- cart drawer ----------
   function renderBag() {
     const n = count(), ls = lines(), t = totals();
     $("#cartCount").textContent = n || "";
@@ -533,7 +859,7 @@
         </div>
         <span class="amt">${money(p.price * q)}</span>
       </div>`).join("")
-      : `<div class="empty"><h2>Your bag is empty</h2>Good things are waiting.<br><a class="btn dark" href="#/shop/new" data-act="close">Shop new in</a></div>`;
+      : `<div class="empty"><h2>Your cart is empty</h2>Good things are waiting.<br><a class="btn dark" href="#/shop/new" data-act="close">Shop new in</a></div>`;
     $("#cartFoot").innerHTML = ls.length ? `
       <div class="sum big"><span>Subtotal</span><span>${money(t.sub)}</span></div>
       <div class="sum" style="font-size:12.5px"><span>Shipping and tax calculated at checkout</span></div>
@@ -630,7 +956,7 @@
                   <div class="fields">
                     <label>Name<input name="name" required autocomplete="name"></label>
                     <label>Email<input name="email" type="email" required autocomplete="email"></label>
-                    <label>Order number <i>(optional)</i><input name="order" placeholder="GR..."></label>
+                    <label><span>Order number <i>(optional)</i></span><input name="order" placeholder="GR..."></label>
                     <label>Topic<select name="topic"><option>Shipping</option><option>Returns &amp; exchanges</option><option>Sizing</option><option>Something else</option></select></label>
                     <label class="full">Message<textarea name="message" required rows="5"></textarea></label>
                   </div>
@@ -676,6 +1002,8 @@
     else if (view === "checkout") viewCheckout();
     else if (view === "order") viewOrder(arg);
     else if (view === "track") viewTrack(arg);
+    else if (view === "account") viewAccount();
+    else if (view === "orders") viewOrders(arg);
     else if (view === "help") { viewHelp(); return scrollToHelp(arg); }
     else viewMissing();
     window.scrollTo(0, 0);
@@ -687,7 +1015,11 @@
     const a = e.target.closest('a[href^="#"]:not([href^="#/"])');
     if (a) { e.preventDefault(); document.getElementById(a.getAttribute("href").slice(1))?.scrollIntoView({ behavior: "smooth" }); return; }
 
-    const el = e.target.closest("[data-save],[data-quick],[data-qadd],[data-htab],[data-rail],[data-pick],[data-buy],[data-step],[data-rm],[data-act],#cartBtn,#searchBtn,#menuBtn");
+    // Product photo: open the quick view. Ctrl/Cmd/middle-click still opens the full page normally.
+    const qv = e.target.closest("[data-qv]");
+    if (qv && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) { e.preventDefault(); return openQuick(qv.dataset.qv); }
+
+    const el = e.target.closest("[data-save],[data-quick],[data-qadd],[data-htab],[data-rail],[data-pick],[data-qty],[data-buy],[data-buynow],[data-qvclose],[data-authmode],[data-otab],[data-reorder],[data-step],[data-rm],[data-act],#cartBtn,#searchBtn,#menuBtn");
     if (!el) return;
     const d = el.dataset;
     if (el.id === "cartBtn") return openBag();
@@ -699,25 +1031,59 @@
     if (d.htab) { homeTab = d.htab; $$("[data-htab]").forEach(t => t.setAttribute("aria-pressed", t === el)); return renderFresh(); }
     if (d.rail) { const r = $("#rail"); return r.scrollBy({ left: +d.rail * r.clientWidth * 0.75 }); }
     if (d.pick) {
-      pick = d.pick;
-      $$("[data-pick]").forEach(b => b.setAttribute("aria-pressed", b === el));
-      $("#sizes").classList.remove("err"); $("#sizeErr").textContent = "";
+      const box = el.closest("[data-buybox]");
+      box.dataset.size = d.pick;
+      box.querySelectorAll("[data-pick]").forEach(b => b.setAttribute("aria-pressed", b === el));
+      box.querySelector(".sizegrid").classList.remove("err"); box.querySelector(".err-msg").textContent = "";
       return;
     }
-    if (d.buy) {
-      if (!pick) { $("#sizes").classList.add("err"); $("#sizeErr").textContent = "Please choose a size first."; return; }
-      add(d.buy, pick);
+    if (d.qty) {
+      const box = el.closest("[data-buybox]"), p = byId[box.dataset.buybox];
+      const q = Math.max(1, Math.min(MAX_QTY, +box.dataset.qty + +d.qty));
+      box.dataset.qty = q;
+      box.querySelector("[data-qtyval]").textContent = q;
+      box.querySelector('[data-qty="-1"]').disabled = q === 1;
+      box.querySelector('[data-qty="1"]').disabled = q === MAX_QTY;
+      box.querySelector("[data-buy] span").innerHTML = `Add to cart &middot; ${money(p.price * q)}`;
+      return;
+    }
+    if ("buy" in d) {
+      const c = boxChoice(el.closest("[data-buybox]")); if (!c) return;
+      add(c.p.id, c.size, c.qty);
       const html = el.innerHTML;
-      el.classList.add("done"); el.innerHTML = ic("check") + "Added to bag";
-      setTimeout(() => { el.classList.remove("done"); el.innerHTML = html; }, 1000);
+      el.classList.add("done"); el.innerHTML = ic("check") + "Added to cart";
+      setTimeout(() => { el.classList.remove("done"); el.innerHTML = html; }, 900);
       return;
     }
+    if ("buynow" in d) {
+      const c = boxChoice(el.closest("[data-buybox]")); if (!c) return;
+      add(c.p.id, c.size, c.qty);
+      location.hash = "#/checkout"; // hashchange closes the quick view
+      return;
+    }
+    if ("qvclose" in d) return closeQuick();
+    if (d.authmode) { authState.mode = d.authmode; return renderAuth(); }
+    if (d.otab) { ordersTab = d.otab; return viewOrders(route.cur?.[1]); }
+    if (d.act === "print") return window.print();
+    if (d.reorder) {
+      const o = getOrder(d.reorder); let added = 0, skipped = 0;
+      for (const i of o?.items || []) {
+        const p = byId[i.id];
+        if (!p || soldOut(p, +i.size)) { skipped++; continue; }
+        const k = `${i.id}|${i.size}`; cart[k] = Math.min((cart[k] || 0) + i.q, 10); added += i.q;
+      }
+      store.set("cart", cart); renderBag();
+      if (added) { bump("#cartCount"); openBag(); }
+      return toast(added ? `${added} ${added === 1 ? "pair" : "pairs"} added to cart${skipped ? ` (${skipped} unavailable)` : ""}` : "Those items are no longer available");
+    }
+    if (d.act === "logout") { store.set("session", null); authState.mode = "login"; promo = null; store.set("promo", null); syncAccountUI(); toast("You're logged out"); location.hash = "#/"; return; }
     if (d.step) return setQty(d.step, cart[d.step] + +d.d);
     if (d.rm) return setQty(d.rm, 0);
     if (d.act === "close") return closeBag();
     if (d.act === "promo") {
       const code = $("#promo").value.trim().toUpperCase();
       if (!code) { promo = null; store.set("promo", null); renderCoTotals(); return; }
+      if (code === "FIRSTSTEP" && firstStepUsed()) { $("#promo").classList.add("bad"); return toast(`You've already used FIRSTSTEP on order #${me().firstStepOrder}`); }
       if (PROMOS[code]) { promo = code; store.set("promo", code); renderCoTotals(); toast(`${code} applied: ${PROMOS[code] * 100}% off`); }
       else { $("#promo").classList.add("bad"); toast("That code isn't valid"); }
     }
@@ -742,6 +1108,7 @@
     e.preventDefault();
     const form = e.target;
     if (form.id === "news") { form.reset(); return toast("You're on the list"); }
+    if (form.id === "authForm") return handleAuth(form);
     if (form.id === "contactForm") {
       const bad = [...form.querySelectorAll("[required]")].find(i => !i.value.trim() || !i.checkValidity());
       if (bad) { bad.classList.add("bad"); bad.focus(); return toast(`Please check: ${bad.closest("label").firstChild.textContent.trim()}`); }
@@ -754,19 +1121,24 @@
     if (bad) { bad.classList.add("bad"); bad.focus(); toast(`Please check: ${bad.closest("label").firstChild.textContent.trim()}`); return; }
     const data = Object.fromEntries(new FormData(form));
     const { ship, ...addr } = data;
-    store.set("addr", addr);
+    if (!me()) return route(); // session ended in another tab: back to the login gate
+    store.set("addr:" + me().email, addr);
     openGateway(data, totals(express).total);
   });
 
   function finishOrder(data, total, paidWith) {
     const id = "GR" + Date.now().toString(36).toUpperCase().slice(-6);
+    const u = me();
     const order = {
-      id, total, paidWith, created: Date.now(), express,
+      id, total, paidWith, created: Date.now(), express, user: u?.email, promo,
       first: data.first, last: data.last, email: data.email, address: data.address, city: data.city, zip: data.zip,
       tracking: "GX" + String(Date.now()).slice(-9) + "BD",
-      items: lines().map(({ p, size, q }) => ({ id: p.id, size, q })),
+      // Snapshot names and prices so the receipt stays correct even if the catalog changes later.
+      items: lines().map(({ p, size, q }) => ({ id: p.id, name: p.name, color: p.color, price: p.price, size, q })),
+      breakdown: totals(express),
     };
     store.set("orders", { ...store.get("orders", {}), [id]: order });
+    if (promo === "FIRSTSTEP" && u) { u.firstStepOrder = id; saveUser(u); syncAccountUI(); }
     cart = {}; promo = null; express = false;
     store.set("cart", cart); store.set("promo", null);
     renderBag();
@@ -785,7 +1157,6 @@
   const gw = { data: null, total: 0, tab: "card", mfs: null, bank: null, otpSent: false };
 
   const cardBrand = n => /^4/.test(n) ? "Visa" : /^(5[1-5]|2[2-7])/.test(n) ? "Mastercard" : /^3[47]/.test(n) ? "Amex" : "";
-  const luhn = n => [...n].reverse().reduce((s, d, i) => { let x = +d; if (i % 2) { x *= 2; if (x > 9) x -= 9; } return s + x; }, 0) % 10 === 0;
 
   function openGateway(data, total) {
     Object.assign(gw, { data, total, tab: "card", mfs: null, bank: null, otpSent: false });
@@ -814,7 +1185,7 @@
           <label>CVC<input name="gwcvc" inputmode="numeric" placeholder="123" maxlength="4" autocomplete="off"></label>
         </div>
         <label>Name on card<input name="gwname" placeholder="As printed on the card" autocomplete="off"></label>
-        <div class="testcards">Test cards:
+        <div class="testcards">Any made-up details work. Or tap:
           <button type="button" data-tcard="4242424242424242">4242 … 4242 succeeds</button>
           <button type="button" data-tcard="4000000000000002">4000 … 0002 declines</button>
         </div>
@@ -844,7 +1215,7 @@
 
     $("#gw").innerHTML = `
       <div class="gw-top">
-        <div><span class="gw-tag">Demo gateway</span><b class="gw-m">grounded<i>.</i></b></div>
+        <div><span class="gw-tag">Demo gateway</span><b class="gw-m" role="img" aria-label="Grounded"><svg class="gr" viewBox="0 0 100 50" aria-hidden="true"><use href="#gr"/></svg>ounded<i>.</i></b></div>
         <button class="tbtn" data-gw="cancel" aria-label="Cancel payment"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
       <div class="gw-amt"><span>Amount to pay</span><strong>${taka(gw.total)}</strong><small>${money(gw.total)} at ৳${BDT_RATE}/USD demo rate</small></div>
@@ -863,7 +1234,7 @@
     setTimeout(() => {
       if (!ok) {
         renderGateway();
-        return gwFail("Card declined by the issuing bank (demo). Try the 4242 test card.");
+        return gwFail("Card declined by the issuing bank (demo). That number is the decline test card; any other number works.");
       }
       $("#gw .gw-body").innerHTML = `<div class="gw-state ok"><span class="tick">${ic("check")}</span><b>Payment successful</b><small>${esc(paidWith)} &middot; ${taka(gw.total)}</small></div>`;
       $("#gw .gw-cancel").remove();
@@ -876,12 +1247,13 @@
     const f = e.target;
     if (f.id === "gwCard") {
       const num = f.gwnum.value.replace(/\D/g, ""), [mm, yy] = f.gwexp.value.split("/").map(s => +s.trim());
-      const brand = cardBrand(num), now = new Date(), cvcLen = brand === "Amex" ? 4 : 3;
-      if (num.length < 15 || !luhn(num) || !brand) return gwFail("Enter a valid card number.", f.gwnum);
-      if (!(mm >= 1 && mm <= 12) || !yy || new Date(2000 + yy, mm) <= now) return gwFail("Enter a valid future expiry date.", f.gwexp);
-      if (f.gwcvc.value.replace(/\D/g, "").length !== cvcLen) return gwFail(`Enter the ${cvcLen}-digit security code.`, f.gwcvc);
-      if (!f.gwname.value.trim()) return gwFail("Enter the name on the card.", f.gwname);
-      return gwProcess(`${brand} •••• ${num.slice(-4)}`, TEST_CARDS[num] !== "decline");
+      // Demo: any made-up details are accepted. We only check the fields are filled in a sensible shape
+      // (no checksum, card-type or expiry-date checks). The one exception is the 4000…0002 decline test card.
+      if (num.length < 12) return gwFail("Enter a card number (any 12–16 digits work in this demo).", f.gwnum);
+      if (!(mm >= 1 && mm <= 12) || !(yy >= 0)) return gwFail("Enter an expiry as MM / YY (any month and year work).", f.gwexp);
+      if (f.gwcvc.value.replace(/\D/g, "").length < 3) return gwFail("Enter any 3 or 4 digit security code.", f.gwcvc);
+      if (!f.gwname.value.trim()) return gwFail("Enter any name.", f.gwname);
+      return gwProcess(`${cardBrand(num) || "Card"} •••• ${num.slice(-4)}`, TEST_CARDS[num] !== "decline");
     }
     if (f.id === "gwMfs") {
       const n = MFS.find(m => m[0] === gw.mfs)[1], phone = f.gwphone.value.trim();
@@ -920,7 +1292,7 @@
       return;
     }
     if (d.tnext) { const all = store.get("orders", {}), o = all[d.tnext]; o.boost = (o.boost || 0) + 1; store.set("orders", all); return viewTrack(o.id); }
-    if (d.gw === "cancel") { closeGateway(); return toast("Payment cancelled. Your bag is saved."); }
+    if (d.gw === "cancel") { closeGateway(); return toast("Payment cancelled. Your cart is saved."); }
     if ("banner" in d) demoBanner(false);
   });
   // Live formatting: "4242 4242 …", "MM / YY", digits only for CVC / phone / OTP.
@@ -938,17 +1310,19 @@
   });
 
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") { if ($("#pay").classList.contains("open")) { closeGateway(); return toast("Payment cancelled. Your bag is saved."); } closeBag(); closeMenu(); $("#searchbar").classList.remove("open"); }
+    if (e.key === "Escape") { if ($("#pay").classList.contains("open")) { closeGateway(); return toast("Payment cancelled. Your cart is saved."); } if (closeQuick()) return; closeBag(); closeMenu(); $("#searchbar").classList.remove("open"); }
     if (e.key === "/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); $("#searchbar").classList.add("open"); $("#q").focus(); }
   });
 
   window.addEventListener("storage", e => {
     if (e.key === "gr:cart") { cart = store.get("cart", {}); renderBag(); }
+    if (e.key === "gr:session" || e.key === "gr:users") { syncAccountUI(); route(); }
     if (e.key === "gr:saved") { saved = new Set(store.get("saved", [])); $("#savedCount").textContent = saved.size || ""; }
   });
-  window.addEventListener("hashchange", () => { closeBag(); route(); });
+  window.addEventListener("hashchange", () => { closeBag(); closeQuick(); route(); });
 
   $("#savedCount").textContent = saved.size || "";
+  syncAccountUI();
   renderBag();
   route();
 })();
