@@ -517,6 +517,7 @@
             ? `<b>First-order code used</b>You saved 15% with FIRSTSTEP on order <a href="#/track/${u.firstStepOrder}">#${u.firstStepOrder}</a>. It can only be used once per account.`
             : `<b>FIRSTSTEP is ready</b>Take 15% off your first order. Enter it at checkout; it works once per account.`}</div>
         </div>
+        ${u.savedCard ? `<div class="sc-tile">${ic("bag")}<div><b>Saved card</b>${esc(cardLabel(u.savedCard))} &middot; expires ${esc(u.savedCard.exp)} &middot; ${esc(u.savedCard.name)}</div><button class="link" data-act="forgetcard">Remove</button></div>` : ""}
 
         <section class="sec" style="padding-top:56px">
           <div class="sec-h"><div><h2>Your <em>orders</em></h2></div></div>
@@ -1076,6 +1077,7 @@
       if (added) { bump("#cartCount"); openBag(); }
       return toast(added ? `${added} ${added === 1 ? "pair" : "pairs"} added to cart${skipped ? ` (${skipped} unavailable)` : ""}` : "Those items are no longer available");
     }
+    if (d.act === "forgetcard") { const u = me(); if (u) { delete u.savedCard; saveUser(u); } toast("Saved card removed"); return viewAccount(); }
     if (d.act === "logout") { store.set("session", null); authState.mode = "login"; promo = null; store.set("promo", null); syncAccountUI(); toast("You're logged out"); location.hash = "#/"; return; }
     if (d.step) return setQty(d.step, cart[d.step] + +d.d);
     if (d.rm) return setQty(d.rm, 0);
@@ -1154,12 +1156,22 @@
   const BANKS = ["Dutch-Bangla Bank", "BRAC Bank", "City Bank", "Eastern Bank", "Islami Bank", "Sonali Bank"];
   const TEST_CARDS = { "4242424242424242": "ok", "5555555555554444": "ok", "4000000000000002": "decline" };
   const DEMO_OTP = "123456";
-  const gw = { data: null, total: 0, tab: "card", mfs: null, bank: null, otpSent: false };
+  const gw = { data: null, total: 0, tab: "card", mfs: null, bank: null, otpSent: false, useSaved: false, pendingSave: null };
 
   const cardBrand = n => /^4/.test(n) ? "Visa" : /^(5[1-5]|2[2-7])/.test(n) ? "Mastercard" : /^3[47]/.test(n) ? "Amex" : "";
+  // Saved cards keep only what a real store's "card on file" shows: brand, last 4, expiry, name.
+  // Never the full number or the security code (the demo accepts any card, so nothing more is needed to pay).
+  const savedCard = () => me()?.savedCard || null;
+  const cardLabel = c => `${c.brand} •••• ${c.last4}`;
+  const cardVisual = c => `
+    <div class="ccard">
+      <div class="ccard-top"><span>${esc(c.brand)}</span>${ic("check")}</div>
+      <div class="ccard-num">•••• •••• •••• ${esc(c.last4)}</div>
+      <div class="ccard-foot"><span><small>Card holder</small>${esc(c.name)}</span><span><small>Expires</small>${esc(c.exp)}</span></div>
+    </div>`;
 
   function openGateway(data, total) {
-    Object.assign(gw, { data, total, tab: "card", mfs: null, bank: null, otpSent: false });
+    Object.assign(gw, { data, total, tab: "card", mfs: null, bank: null, otpSent: false, useSaved: false, pendingSave: null });
     $("#pay").classList.add("open"); $("#pay").setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
     demoBanner(true);
@@ -1176,7 +1188,17 @@
   function renderGateway() {
     const tabs = [["card", "Card"], ["mfs", "Mobile banking"], ["net", "Net banking"]];
     let body = "";
-    if (gw.tab === "card") body = `
+    const sc = savedCard();
+    if (gw.tab === "card" && sc && gw.useSaved) body = `
+      <div class="gw-form">
+        <p class="gw-hint">Paying with your saved card</p>
+        ${cardVisual(sc)}
+        <div class="gw-err" id="gwErr" role="alert"></div>
+        <button class="btn olive block" type="button" data-gwpaysaved>Pay ${taka(gw.total)}</button>
+        <div class="saved-links"><button type="button" class="link" data-gwnew>Use a different card</button><button type="button" class="link" data-gwforget>Remove saved card</button></div>
+      </div>`;
+    else if (gw.tab === "card") body = `
+      ${sc ? `<div class="saved-bar">${ic("check")}<span><b>Saved card</b>${esc(cardLabel(sc))} &middot; exp ${esc(sc.exp)}</span><button type="button" class="btn dark" data-gwload>Load my card</button></div>` : ""}
       <form id="gwCard" class="gw-form" novalidate autocomplete="off">
         <div class="gw-brands"><span>Visa</span><span>Mastercard</span><span>Amex</span></div>
         <label>Card number<div class="cardnum"><input name="gwnum" inputmode="numeric" placeholder="4242 4242 4242 4242" maxlength="19" autocomplete="off"><b id="gwBrand"></b></div></label>
@@ -1189,6 +1211,7 @@
           <button type="button" data-tcard="4242424242424242">4242 … 4242 succeeds</button>
           <button type="button" data-tcard="4000000000000002">4000 … 0002 declines</button>
         </div>
+        <label class="save-card"><input type="checkbox" name="gwsave"${sc ? "" : " checked"}><span><b>${sc ? "Replace my saved card with this one" : "Save this card for next time"}</b>Only the card type, last 4 digits, expiry and name are kept. Never the full number or security code.</span></label>
         <div class="gw-err" id="gwErr" role="alert"></div>
         <button class="btn olive block" type="submit">Pay ${taka(gw.total)}</button>
       </form>`;
@@ -1233,10 +1256,14 @@
     $("#gw .gw-body").innerHTML = `<div class="gw-state"><span class="spin"></span><b>Processing payment</b></div>`;
     setTimeout(() => {
       if (!ok) {
+        gw.pendingSave = null;
         renderGateway();
         return gwFail("Card declined by the issuing bank (demo). That number is the decline test card; any other number works.");
       }
-      $("#gw .gw-body").innerHTML = `<div class="gw-state ok"><span class="tick">${ic("check")}</span><b>Payment successful</b><small>${esc(paidWith)} &middot; ${taka(gw.total)}</small></div>`;
+      // Save the card only once the payment has gone through.
+      const u = me(), saving = gw.pendingSave && u;
+      if (saving) { u.savedCard = gw.pendingSave; saveUser(u); }
+      $("#gw .gw-body").innerHTML = `<div class="gw-state ok"><span class="tick">${ic("check")}</span><b>Payment successful</b><small>${esc(paidWith)} &middot; ${taka(gw.total)}</small>${saving ? `<small class="saved-note">Card saved for next time</small>` : ""}</div>`;
       $("#gw .gw-cancel").remove();
       $$("#gw [data-gwtab]").forEach(b => b.disabled = true);
       setTimeout(() => { const d = gw.data, t = gw.total; closeGateway(); finishOrder(d, t, paidWith); }, 550);
@@ -1253,7 +1280,11 @@
       if (!(mm >= 1 && mm <= 12) || !(yy >= 0)) return gwFail("Enter an expiry as MM / YY (any month and year work).", f.gwexp);
       if (f.gwcvc.value.replace(/\D/g, "").length < 3) return gwFail("Enter any 3 or 4 digit security code.", f.gwcvc);
       if (!f.gwname.value.trim()) return gwFail("Enter any name.", f.gwname);
-      return gwProcess(`${cardBrand(num) || "Card"} •••• ${num.slice(-4)}`, TEST_CARDS[num] !== "decline");
+      const brand = cardBrand(num) || "Card";
+      gw.pendingSave = f.gwsave?.checked
+        ? { brand, last4: num.slice(-4), exp: `${String(mm).padStart(2, "0")}/${String(yy).padStart(2, "0")}`, name: f.gwname.value.trim() }
+        : null;
+      return gwProcess(`${brand} •••• ${num.slice(-4)}`, TEST_CARDS[num] !== "decline");
     }
     if (f.id === "gwMfs") {
       const n = MFS.find(m => m[0] === gw.mfs)[1], phone = f.gwphone.value.trim();
@@ -1279,12 +1310,19 @@
     }
   });
   document.addEventListener("click", e => {
-    const el = e.target.closest("[data-gwtab],[data-mfs],[data-bank],[data-tcard],[data-gw],[data-tnext],#demoBanner [data-banner]");
+    const el = e.target.closest("[data-gwtab],[data-mfs],[data-bank],[data-tcard],[data-gw],[data-tnext],[data-gwload],[data-gwnew],[data-gwforget],[data-gwpaysaved],#demoBanner [data-banner]");
     if (!el) return;
     const d = el.dataset;
     if (d.gwtab) { gw.tab = d.gwtab; gw.mfs = null; gw.otpSent = false; return renderGateway(); }
     if ("mfs" in d) { gw.mfs = d.mfs || null; gw.otpSent = false; renderGateway(); return $("#gwMfs")?.gwphone.focus(); }
     if (d.bank) { gw.bank = d.bank; $$("[data-bank]").forEach(b => b.setAttribute("aria-pressed", b === el)); $("#gwErr").textContent = ""; return; }
+    if ("gwload" in d) { gw.useSaved = true; return renderGateway(); }
+    if ("gwnew" in d) { gw.useSaved = false; renderGateway(); return $("#gwCard")?.gwnum.focus(); }
+    if ("gwpaysaved" in d) { const c = savedCard(); if (!c) return renderGateway(); gw.pendingSave = null; return gwProcess(cardLabel(c)); }
+    if ("gwforget" in d) {
+      const u = me(); if (u) { delete u.savedCard; saveUser(u); }
+      gw.useSaved = false; renderGateway(); return toast("Saved card removed");
+    }
     if (d.tcard) {
       const f = $("#gwCard"), y = (new Date().getFullYear() + 3) % 100;
       f.gwnum.value = d.tcard.replace(/(\d{4})(?=\d)/g, "$1 "); f.gwexp.value = `12 / ${y}`; f.gwcvc.value = "123"; f.gwname.value = "Test User";
